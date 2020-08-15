@@ -213,7 +213,7 @@ def get_candate_img(candidate, frame):
 
     heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
     heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-    maxHeight = max(int(heightA), int(heightB))#
+    maxHeight = max(int(heightA), int(heightB))
 
     dst = np.array(
         [[0, 0],
@@ -226,14 +226,34 @@ def get_candate_img(candidate, frame):
     M = cv2.getPerspectiveTransform(corners, dst)
     warped = cv2.warpPerspective(frame, M, (maxWidth, maxHeight), borderMode=cv2.INTER_NEAREST)
 
-    return warped
+    return warped, maxWidth, maxHeight
 
 
 def validate_candidates(candidates, frame):
     markers = list()
     for can in candidates:
-        candidate_img = get_candate_img(can, frame)
+        candidate_img, maxWidth, maxHeight = get_candate_img(can, frame)
         ret, candidate_img = cv2.threshold(candidate_img, 125, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+        ust = candidate_img[0: int(round(maxHeight/6)), 0:]
+        sol = candidate_img[0:, 0: int(round(maxWidth/6))]
+        alt = candidate_img[int(round((maxHeight/6)*5)): maxWidth, 0:]
+        sag = candidate_img[0:, int(round((maxWidth/6)*5)):]
+        black_list = [ust, sol, alt, sag]
+        cv2.imshow("alt", alt)
+        for edge in black_list:
+            bits = extract_bits(edge)
+
+            print(bits)
+            print("------------------------")
+            if np.count_nonzero(bits) > 3:
+                #print("*********************")
+                #index = np.argwhere(np.count_nonzero(bits) > 3)
+                #np.delete(candidates, index)
+                candidates.remove(can)
+                print(can)
+                break
+        # burada AR tag'in kenarlarının %20'sinin siyah olup olmadığını kontrol eden bir if bloğu olmalı
 
         bits = extract_bits(candidate_img)
         bits = np.transpose(bits)
@@ -305,7 +325,7 @@ def extract_bits(img):
             bitImg = inner_rg[Ystart+marginY:Ystart+cellHeight-marginY, Xstart+marginX:Xstart+cellWidth-marginX]
             if np.count_nonzero(bitImg) / bitImg.size > 0.5:
                 bitmap[j][i] = 1
-    print(bitmap)
+
     return bitmap
 
 
@@ -351,7 +371,7 @@ camera = cv2.VideoCapture(0)
 
 while True:
     _, frame = camera.read()
-    frame = cv2.GaussianBlur(frame, (3, 3), 0)
+    frame = cv2.GaussianBlur(frame, (5, 5), 0)
 
     # kamera kalibrasyonu hala deneme aşamasında
     """if params.undistortImg is True:
