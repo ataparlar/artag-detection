@@ -5,15 +5,12 @@ import json
 
 """
 KODA BAKMADAN ÖNCE
-
 Yeşil ile gösterilenler adaylardır 
 Mavi ile gösterilenler ise onaylanmış adaylardır(markers)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 Bu kod 5x5 lik kodları algılamak için tasarlanmıştır tags isimli sınıfta "valids" isimli listede
 kabul edilen her artag'in iç kodları tanımlanmışır. İsterseniz yeni kodlar ekleyebilirsiniz.
-
 *PARAMETRELER
 params klasörü hemen hemen bütün parametrelerin depolandığı yerdir
-
 -threshConstant: eşiklemenin hassasiyeti ile oynar ne kadar düşük o kadar hassaslaşır
 -threshWinSize: parametleri ile oynanabilir ama tek sayı olmasına dikkat ediniz
 -minAreaRate: belirlenen adayların sahip olması gereken en küçük alanın hesaplanmasında kullanılır
@@ -29,7 +26,6 @@ params klasörü hemen hemen bütün parametrelerin depolandığı yerdir
 -configFileName: kamera kalibrasyon dosyasının bulunduğu konum(eğer aynı klasörde ise ismi yetiyor
 -undistortImg: kamera kalibrasyonu hala deneme aşamasında oluğu için isterseniz undistortion işlemini engelleyebilirsiniz
 -showCandidate showMarkers: showTresholded bu üçü isminden de anlaşıacağı üzere istediğiniz şeyleri kapatıp açabilirsiniz
-
 """
 
 
@@ -122,12 +118,12 @@ class params:
     showTresholded = True
 
 
-def load_camera_params(filename='default.json'):
+"""def load_camera_params(filename='default.json'):
     with open(filename, 'r') as loadFile:
         data = json.load(loadFile)
         mtx = np.array(data['mtx'])
         dist = np.array(data['dist'])
-    return mtx, dist
+    return mtx, dist"""
 
 
 # çok ağır çalışıyor + tam çalışmıyor (bu fonksiyondan vazgeçilebilir)
@@ -253,6 +249,7 @@ def validate_candidates(candidates, frame):
         #bitimg = recreate_img(bits)
         #cv2.imshow("bits", bitimg)
         #cv2.imshow("otsu", candidate_img)
+        cv2.imshow("cand", candidate_img)
     return markers
 
 
@@ -308,12 +305,12 @@ def extract_bits(img):
             bitImg = inner_rg[Ystart+marginY:Ystart+cellHeight-marginY, Xstart+marginX:Xstart+cellWidth-marginX]
             if np.count_nonzero(bitImg) / bitImg.size > 0.5:
                 bitmap[j][i] = 1
-
+    print(bitmap)
     return bitmap
 
 
 def detect_candidates(grayImg):
-    th = cv2.adaptiveThreshold(grayImg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 9, params.threshConstant)
+    th = cv2.adaptiveThreshold(grayImg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 9, params.threshConstant)
     cnts = cv2.findContours(th, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)[-2]
 
     if params.showTresholded is True:
@@ -349,16 +346,16 @@ def find_center(marker):
 
 
 # ANA ALGORİTMA BAŞLANGICI
-camera = cv2.VideoCapture(1)
-mtx, dist = load_camera_params(filename=params.configFileName)
+camera = cv2.VideoCapture(0)
+#mtx, dist = load_camera_params(filename=params.configFileName)
 
 while True:
     _, frame = camera.read()
-    frame = cv2.GaussianBlur(frame, (3,3), 0)
+    frame = cv2.GaussianBlur(frame, (3, 3), 0)
 
     # kamera kalibrasyonu hala deneme aşamasında
-    if params.undistortImg is True:
-        frame = cv2.undistort(frame, mtx, dist)
+    """if params.undistortImg is True:
+        frame = cv2.undistort(frame, mtx, dist)"""
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -367,6 +364,7 @@ while True:
     if len(candidates) > 0:
         #candidates = remove_close_candidates(candidates)
         markers = validate_candidates(candidates, gray)
+        print(markers)
 
         if params.showCandidate is True:
             cv2.drawContours(frame, candidates, -1, (0, 255, 0), 2)
